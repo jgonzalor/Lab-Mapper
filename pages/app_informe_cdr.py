@@ -11,6 +11,7 @@ from datetime import datetime
 # 🔐 Guardián central de la suite
 from guardian import login_guard
 from suite_nav import render_suite_sidebar  # menú lateral de la suite
+from ui.styles import apply_theme, page_header, section_title
 
 
 # --------------------------------------------------------
@@ -361,8 +362,14 @@ def main():
     # Guard de login + menú lateral de la suite
     login_guard()
     render_suite_sidebar()
+    apply_theme()
 
-    st.title("📑 Generador de Informe CDR")
+    page_header(
+        "Generador de Informe CDR",
+        "Construye un borrador técnico a partir de un archivo limpio, conservando el análisis basado únicamente en el CDR cargado.",
+        eyebrow="INFORME PERICIAL",
+        badges=["Texto editable", "DOCX opcional", "Resumen técnico"],
+    )
 
     st.markdown(
         """
@@ -402,6 +409,7 @@ de la Suite Go Mapper y construye un **borrador de informe** de análisis de CDR
     numB_col = meta.get("numB_col")
 
     # Selección de la línea objeto
+    section_title("Configuración", "Define la línea objeto y genera el borrador del informe.", "01")
     with st.expander("Configuración de la línea objeto de análisis", expanded=True):
         numero_objeto = None
 
@@ -439,7 +447,7 @@ de la Suite Go Mapper y construye un **borrador de informe** de análisis de CDR
         with st.spinner("Generando borrador de informe a partir del archivo limpio..."):
             reporte_texto = build_report_text(df, meta, numero_objeto)
 
-        st.subheader("Vista previa del informe (texto)")
+        section_title("Vista previa del informe", "Revisa el texto antes de exportar o copiar al expediente.", "02")
         st.text_area("Informe generado", value=reporte_texto, height=600)
 
         # Descarga como TXT

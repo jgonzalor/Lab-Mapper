@@ -26,6 +26,7 @@ import re
 
 import pandas as pd
 import streamlit as st
+from ui.styles import apply_theme, kpi_row, page_header, section_title
 
 # =========================
 #   GUARDIAN / SIDEBAR
@@ -254,9 +255,15 @@ def _build_default_options(antenna_href, compass_href, route_color: str) -> KMZP
 
 def render():
     _apply_guardian()
+    apply_theme()
 
-    st.title("🌎 Sentinel Mapper KMZ Pro")
-    st.caption("Ruta vial azimuth → azimuth + negocios/empresas OSM dentro del corredor.")
+    page_header(
+        "Sentinel Mapper KMZ Pro",
+        "Genera productos KMZ profesionales con antenas, eventos, cobertura referencial, azimuth, rutas y popups periciales.",
+        eyebrow="GEOANÁLISIS KMZ",
+        badges=["KMZ/KML", "Azimuth", "Ruta operativa"],
+    )
+    section_title("Archivo y filtros", "Carga un archivo limpio o compatible y define qué eventos entrarán al producto KMZ.", "01")
 
     uploaded = st.file_uploader(
         "Sube el Excel limpio de Go Suite Mapper o CSV compatible",
@@ -303,13 +310,14 @@ def render():
     try:
         prepared_preview = prepare_dataframe(filtered, mapping)
         mapeables = int(prepared_preview["__is_mappable"].sum())
-        st.caption(
-            f"Registros seleccionados: {len(filtered):,} | Eventos mapeables: {mapeables:,}"
-        )
+        kpi_row([
+            {"label": "Registros seleccionados", "value": f"{len(filtered):,}", "help": "Después del filtro de tipo"},
+            {"label": "Eventos mapeables", "value": f"{mapeables:,}", "help": "Con latitud/longitud válidas"},
+        ], columns=2)
     except Exception:
         st.caption(f"Registros seleccionados: {len(filtered):,}")
 
-    st.markdown("### Ruta")
+    section_title("Ruta", "Configura la presentación visual de la ruta generada sin modificar el motor KMZ.", "02")
     route_color_label = st.selectbox(
         "Color de la ruta",
         list(ROUTE_COLOR_MAP.keys()),
