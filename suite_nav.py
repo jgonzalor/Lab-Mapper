@@ -1,6 +1,7 @@
 # suite_nav.py — Menú lateral unificado para Go Mapper Suite
 import os
 import streamlit as st
+from ui.styles import apply_theme
 
 ROOT = os.path.dirname(__file__)
 
@@ -38,8 +39,17 @@ def _logout():
 
 def render_suite_sidebar():
     """Dibuja el menú lateral con navegación + logout."""
+    apply_theme()
     with st.sidebar:
-        st.markdown("### 🗺️ Go Mapper Suite")
+        st.markdown(
+            """
+            <div class="gm-sidebar-brand">
+              <div class="gm-sidebar-brand-title">🗺️ Go Mapper Suite</div>
+              <div class="gm-sidebar-brand-sub">CDR · Análisis · KMZ · Pericial</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         # Info de usuario
         user = st.session_state.get("username") or st.session_state.get("user_name")
@@ -52,43 +62,62 @@ def render_suite_sidebar():
                 rol_txt = "Usuario"
             else:
                 rol_txt = "Sesión"
-            st.markdown(f"**Usuario:** {user}  \n_Rol: {rol_txt}_")
+            st.markdown(
+                f"<div class='gm-sidebar-user'><strong>Usuario:</strong> {user}<br><span>Rol: {rol_txt}</span></div>",
+                unsafe_allow_html=True,
+            )
         else:
-            st.markdown("_Sesión iniciada_")
+            st.markdown("<div class='gm-sidebar-user'>Sesión iniciada</div>", unsafe_allow_html=True)
 
         # Botón de cerrar sesión
         if st.button("🚪 Cerrar sesión", key="logout_sidebar"):
             _logout()
 
         st.markdown("---")
-        st.markdown("#### Navegación")
+        st.markdown("<div class='gm-nav-group'>Navegación</div>", unsafe_allow_html=True)
 
-        # Link a la portada (app.py)
         try:
             st.page_link("app.py", label="🏠 Inicio")
         except Exception:
             pass
 
-        # Páginas del menú
-        links = [
-            ("pages/app_limpieza_excel.py", "🧹 Limpieza"),
-            ("pages/app_mapper_azimuth.py", "🛰️ KMZ Azimut"),
-            ("pages/app_linea_tiempo.py", "📅 Línea de tiempo"),
-            ("pages/app_link_analysis.py", "🔗 Análisis de vínculos"),
-            ("pages/app armonizador a telcel.py", "🔁 Armonizador"),
-            ("pages/app_consulta_visual.py", "📊 Consulta visual"),
-            ("pages/app_maestro_ubicaciones.py", "📍 Maestro de ubicaciones"),
-
-            # ====== NUEVOS MÓDULOS ======
-            ("pages/app_oraculo_cdr.py", "🧠 ORÁCULO CDR"),
-            ("pages/app_grafo_inteligente.py", "🕸️ Grafo Inteligente"),
-            ("pages/app_lex_cdr.py", "📚 LEX CDR (FAQ Legal)"),
+        groups = [
+            (
+                "Preparación",
+                [
+                    ("pages/app_limpieza_excel.py", "🧹 Limpieza"),
+                    ("pages/app armonizador a telcel.py", "🔁 Armonizador"),
+                    ("pages/app_maestro_ubicaciones.py", "📍 Maestro de ubicaciones"),
+                ],
+            ),
+            (
+                "Análisis",
+                [
+                    ("pages/app_consulta_visual.py", "📊 Consulta visual"),
+                    ("pages/app_linea_tiempo.py", "📅 Línea de tiempo"),
+                    ("pages/app_link_analysis.py", "🔗 Análisis de vínculos"),
+                    ("pages/app_oraculo_cdr.py", "🧠 ORÁCULO CDR"),
+                    ("pages/app_grafo_inteligente.py", "🕸️ Grafo Inteligente"),
+                ],
+            ),
+            (
+                "Mapas y productos",
+                [
+                    ("pages/app_mapper_azimuth.py", "🛰️ KMZ Azimut"),
+                    ("pages/app_sentinel_mapper_kmz_pro.py", "🌎 KMZ Pro"),
+                    ("pages/app_informe_cdr.py", "📑 Informe CDR"),
+                    ("pages/app_lex_cdr.py", "📚 LEX CDR"),
+                ],
+            ),
         ]
 
-        for script, label in links:
-            if _page_exists(script):
+        for group_name, links in groups:
+            visible = [(script, label) for script, label in links if _page_exists(script)]
+            if not visible:
+                continue
+            st.markdown(f"<div class='gm-nav-group'>{group_name}</div>", unsafe_allow_html=True)
+            for script, label in visible:
                 try:
                     st.page_link(script, label=label)
                 except Exception:
-                    # Si algo raro pasa con page_link, no tronamos la app
                     pass
