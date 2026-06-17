@@ -1,7 +1,8 @@
 # suite_nav.py — Menú lateral unificado para Go Mapper Suite
 import os
+import sys
 import streamlit as st
-from ui.styles import apply_theme
+from ui.styles import inject_global_styles
 
 ROOT = os.path.dirname(__file__)
 
@@ -37,9 +38,15 @@ def _logout():
     st.experimental_rerun()
 
 
+def _active_script_name() -> str:
+    main_file = getattr(sys.modules.get("__main__"), "__file__", "")
+    return os.path.basename(str(main_file))
+
+
 def render_suite_sidebar():
     """Dibuja el menú lateral con navegación + logout."""
-    apply_theme()
+    inject_global_styles()
+    active_name = _active_script_name()
     with st.sidebar:
         st.markdown(
             """
@@ -63,23 +70,24 @@ def render_suite_sidebar():
             else:
                 rol_txt = "Sesión"
             st.markdown(
-                f"<div class='gm-sidebar-user'><strong>Usuario:</strong> {user}<br><span>Rol: {rol_txt}</span></div>",
+                f"<div class='gm-sidebar-user'><div><strong>{user}</strong><br><span>{rol_txt}</span></div><span>●</span></div>",
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown("<div class='gm-sidebar-user'>Sesión iniciada</div>", unsafe_allow_html=True)
+            st.markdown("<div class='gm-sidebar-user'><div><strong>Sesión</strong><br><span>Activa</span></div><span>●</span></div>", unsafe_allow_html=True)
 
-        # Botón de cerrar sesión
-        if st.button("🚪 Cerrar sesión", key="logout_sidebar"):
+        if st.button("Cerrar sesión", key="logout_sidebar"):
             _logout()
 
         st.markdown("---")
-        st.markdown("<div class='gm-nav-group'>Navegación</div>", unsafe_allow_html=True)
-
-        try:
-            st.page_link("app.py", label="🏠 Inicio")
-        except Exception:
-            pass
+        st.markdown("<div class='gm-nav-group'>Inicio</div>", unsafe_allow_html=True)
+        if active_name == "app.py":
+            st.markdown("<div class='gm-active-page'>🏠 Inicio</div>", unsafe_allow_html=True)
+        else:
+            try:
+                st.page_link("app.py", label="🏠 Inicio")
+            except Exception:
+                pass
 
         groups = [
             (
@@ -87,7 +95,6 @@ def render_suite_sidebar():
                 [
                     ("pages/app_limpieza_excel.py", "🧹 Limpieza"),
                     ("pages/app armonizador a telcel.py", "🔁 Armonizador"),
-                    ("pages/app_maestro_ubicaciones.py", "📍 Maestro de ubicaciones"),
                 ],
             ),
             (
@@ -101,12 +108,23 @@ def render_suite_sidebar():
                 ],
             ),
             (
-                "Mapas y productos",
+                "Geográfico",
                 [
                     ("pages/app_mapper_azimuth.py", "🛰️ KMZ Azimut"),
                     ("pages/app_sentinel_mapper_kmz_pro.py", "🌎 KMZ Pro"),
+                ],
+            ),
+            (
+                "Reportes",
+                [
                     ("pages/app_informe_cdr.py", "📑 Informe CDR"),
                     ("pages/app_lex_cdr.py", "📚 LEX CDR"),
+                ],
+            ),
+            (
+                "Sistema",
+                [
+                    ("pages/app_maestro_ubicaciones.py", "📍 Maestro de ubicaciones"),
                 ],
             ),
         ]
@@ -117,6 +135,9 @@ def render_suite_sidebar():
                 continue
             st.markdown(f"<div class='gm-nav-group'>{group_name}</div>", unsafe_allow_html=True)
             for script, label in visible:
+                if os.path.basename(script) == active_name:
+                    st.markdown(f"<div class='gm-active-page'>{label}</div>", unsafe_allow_html=True)
+                    continue
                 try:
                     st.page_link(script, label=label)
                 except Exception:

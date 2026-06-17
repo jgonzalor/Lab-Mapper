@@ -4,7 +4,8 @@ import os
 import streamlit as st
 from suite_nav import render_suite_sidebar      # Menú lateral unificado
 from guardian import login_guard                # Guardián central de acceso
-from ui.styles import apply_theme, info_panel, kpi_row, module_card, page_header, section_title
+from ui.styles import inject_global_styles
+from ui.components import render_app_header, render_info_panel, render_kpi_row, render_module_card, render_section
 
 # =========================
 #   CONFIG UI BÁSICA
@@ -17,7 +18,7 @@ st.set_page_config(
 )
 
 # Tema visual profesional compartido
-apply_theme()
+inject_global_styles()
 
 # =========================
 #   UTILIDADES DE PÁGINAS
@@ -55,10 +56,9 @@ def launcher():
     )
     saludo = f"Sesión activa: {username}" if username else "Sesión activa"
 
-    page_header(
+    render_app_header(
         "Go Mapper Suite",
         "Plataforma operativa para limpieza, homologación, análisis pericial, mapas y productos KMZ/KML de CDR.",
-        eyebrow="INTELIGENCIA · CDR · GEOANÁLISIS",
         badges=[saludo, "Laboratorio seguro", "Suite multipágina"],
     )
 
@@ -152,7 +152,7 @@ def launcher():
     existing_modules = [m for m in modules if page_by_fname.get(m["fname"])]
     missing_modules = [m for m in modules if not page_by_fname.get(m["fname"])]
 
-    kpi_row(
+    render_kpi_row(
         [
             {"label": "Módulos activos", "value": len(existing_modules), "help": "Páginas disponibles en la suite"},
             {"label": "Flujo recomendado", "value": "Limpieza → Consulta → KMZ", "help": "Ruta operativa base"},
@@ -161,27 +161,27 @@ def launcher():
         columns=3,
     )
 
-    section_title("Centro de operaciones", "Accesos rápidos a los módulos principales de la suite.", "▦")
+    render_section("Centro de operaciones", "Accesos rápidos a los módulos principales de la suite.", "▦")
 
     cols = st.columns(3)
     for i, mod in enumerate(modules):
         col = cols[i % 3]
         with col:
             rel = page_by_fname.get(mod["fname"])
-            module_card(mod["title"], mod["desc"], mod.get("tag", "Módulo"))
+            render_module_card(mod["title"], mod["desc"], mod.get("tag", "Módulo"))
             if rel:
                 st.page_link(rel, label=f"➡️ {mod['button']}")
             else:
                 st.warning("Módulo no encontrado en /pages.", icon="⚠️")
 
     if missing_modules:
-        info_panel(
+        render_info_panel(
             "Módulos pendientes",
             "Algunos accesos están declarados en la suite pero todavía no tienen archivo de página disponible. Se muestran como advertencia para no ocultar el estado del laboratorio.",
         )
 
-    section_title("Sugerencias operativas", "Buenas prácticas para procesar lotes grandes sin saturar geocoding ni la sesión.", "◌")
-    info_panel(
+    render_section("Sugerencias operativas", "Buenas prácticas para procesar lotes grandes sin saturar geocoding ni la sesión.", "◌")
+    render_info_panel(
         "Rendimiento recomendado",
         "Ejecuta Limpieza primero con caché/PlusRepo cuando aplique; si faltan direcciones, realiza una segunda pasada limitada y divide lotes grandes en tandas controladas.",
     )

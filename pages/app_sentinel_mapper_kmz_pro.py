@@ -27,6 +27,7 @@ import re
 import pandas as pd
 import streamlit as st
 from ui.styles import apply_theme, kpi_row, page_header, section_title
+from ui.components import render_card, render_step_header
 
 # =========================
 #   GUARDIAN / SIDEBAR
@@ -263,12 +264,12 @@ def render():
         eyebrow="GEOANÁLISIS KMZ",
         badges=["KMZ/KML", "Azimuth", "Ruta operativa"],
     )
-    section_title("Archivo y filtros", "Carga un archivo limpio o compatible y define qué eventos entrarán al producto KMZ.", "01")
-
-    uploaded = st.file_uploader(
-        "Sube el Excel limpio de Go Suite Mapper o CSV compatible",
-        type=["xlsx", "xls", "csv"],
-    )
+    with render_card():
+        render_step_header("01", "Archivo", "Carga el Excel limpio de Go Suite Mapper o un CSV compatible.")
+        uploaded = st.file_uploader(
+            "Archivo fuente",
+            type=["xlsx", "xls", "csv"],
+        )
 
     if not uploaded:
         return
@@ -298,31 +299,44 @@ def render():
     tipo_col = mapping.get("tipo")
     default_categories = ["DATOS", "LLAMADAS", "SMS"]
 
-    st.markdown("### Filtro")
-    selected_categories = st.multiselect(
-        "Tipo de eventos a incluir",
-        options=default_categories,
-        default=default_categories,
-    )
+    with render_card():
+        render_step_header("02", "Columnas detectadas", "Revisión visual del mapeo automático usado por el motor KMZ.")
+        mapping_rows = [
+            {"Campo": key, "Columna detectada": value or "—"}
+            for key, value in mapping.items()
+            if key in {"telefono", "tipo", "numero_a", "numero_b", "fecha", "hora", "datetime", "latitud", "longitud", "azimuth", "direccion", "plus_code"}
+        ]
+        st.dataframe(pd.DataFrame(mapping_rows), use_container_width=True, height=220)
+
+    with render_card():
+        render_step_header("03", "Filtros", "Selecciona las categorías de evento que entrarán al producto geográfico.")
+        selected_categories = st.multiselect(
+            "Tipo de eventos a incluir",
+            options=default_categories,
+            default=default_categories,
+        )
 
     filtered = _filter_by_type(df, mapping, selected_categories)
 
-    try:
-        prepared_preview = prepare_dataframe(filtered, mapping)
-        mapeables = int(prepared_preview["__is_mappable"].sum())
-        kpi_row([
-            {"label": "Registros seleccionados", "value": f"{len(filtered):,}", "help": "Después del filtro de tipo"},
-            {"label": "Eventos mapeables", "value": f"{mapeables:,}", "help": "Con latitud/longitud válidas"},
-        ], columns=2)
-    except Exception:
-        st.caption(f"Registros seleccionados: {len(filtered):,}")
+    with render_card():
+        render_step_header("04", "Métricas", "Conteo operativo antes de construir el KMZ.")
+        try:
+            prepared_preview = prepare_dataframe(filtered, mapping)
+            mapeables = int(prepared_preview["__is_mappable"].sum())
+            kpi_row([
+                {"label": "Registros seleccionados", "value": f"{len(filtered):,}", "help": "Después del filtro de tipo"},
+                {"label": "Eventos mapeables", "value": f"{mapeables:,}", "help": "Con latitud/longitud válidas"},
+            ], columns=2)
+        except Exception:
+            st.caption(f"Registros seleccionados: {len(filtered):,}")
 
-    section_title("Ruta", "Configura la presentación visual de la ruta generada sin modificar el motor KMZ.", "02")
-    route_color_label = st.selectbox(
-        "Color de la ruta",
-        list(ROUTE_COLOR_MAP.keys()),
-        index=0,
-    )
+    with render_card():
+        render_step_header("05", "Configuración KMZ", "Ajustes visuales del producto sin modificar el motor geográfico.")
+        route_color_label = st.selectbox(
+            "Color de la ruta",
+            list(ROUTE_COLOR_MAP.keys()),
+            index=0,
+        )
 
     route_color = ROUTE_COLOR_MAP.get(route_color_label, "ff00ff00")
     antenna_href, compass_href, kmz_assets = _build_assets_auto()
@@ -332,7 +346,11 @@ def render():
         route_color=route_color,
     )
 
-    if st.button("🚀 Generar KMZ Pro", type="primary", use_container_width=True):
+    with render_card():
+        render_step_header("06", "Generar producto", "Construye y descarga el KMZ Pro con los parámetros seleccionados.")
+        generate = st.button("🚀 Generar KMZ Pro", type="primary")
+
+    if generate:
         if filtered.empty:
             st.warning("No hay registros para generar con el filtro seleccionado.")
             return
