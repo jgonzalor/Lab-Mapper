@@ -11,6 +11,7 @@ from datetime import datetime as dt
 
 import pandas as pd
 import streamlit as st
+from ui.styles import apply_theme, page_header, section_title
 
 from core.query_engine import QueryEngine
 from core.agent_orchestrator import run_question
@@ -114,9 +115,14 @@ def main():
     # sidebar suite (si aplica)
     if render_suite_sidebar:
         render_suite_sidebar()
+    apply_theme()
 
-    st.title("🧠 ORÁCULO CDR v2 — Consulta Inteligente (MAPPER)")
-    st.caption("Pregunta ➜ intent ➜ consulta estructurada (solo lectura) ➜ respuesta + evidencia + filtros.")
+    page_header(
+        "ORÁCULO CDR",
+        "Consulta inteligente de CDR limpio: pregunta, intención detectada, respuesta estructurada y filas de evidencia exportables.",
+        eyebrow="CONSULTA ASISTIDA",
+        badges=["DuckDB en memoria", "Solo lectura", "Evidencia exportable"],
+    )
 
     qe = _get_engine()
 
@@ -130,7 +136,7 @@ def main():
         # Izquierda: Caso + Carga dataset
         # -----------------------------
         with col_left:
-            st.markdown("### 📤 Carga de CDR limpia")
+            section_title("Carga de CDR limpia", "Sube uno o varios Excel limpios y registra el nombre del caso.", "01")
 
             case_name = st.text_input(
                 "Nombre del caso",
@@ -174,7 +180,7 @@ def main():
         # Derecha: Estado + forzar intent
         # -----------------------------
         with col_right:
-            st.markdown("### 📌 Estado del dataset")
+            section_title("Estado del dataset", "Resumen operativo del conjunto cargado.", "02")
             state = qe.get_state()
 
             st.write(f"**Filas:** {state.filas}")
@@ -184,7 +190,7 @@ def main():
             st.write(f"**Multi-CDR:** {'Sí' if state.multi_cdr else 'No'}")
 
             st.markdown("---")
-            st.markdown("### 🧪 Pruebas / forzar intent")
+            section_title("Pruebas / forzar intent", "Herramienta de control para validar clasificación.", "03")
             forced = st.selectbox(
                 "Forzar intent (opcional)",
                 options=["(auto)"] + list(INTENTS.keys()),
@@ -195,7 +201,7 @@ def main():
     # =========================================================
     #  CONSULTA
     # =========================================================
-    st.markdown("## 💬 Consulta")
+    section_title("Consulta", "Formula preguntas operativas y revisa la evidencia de soporte.", "04")
 
     colA, colB = st.columns([2, 1])
 

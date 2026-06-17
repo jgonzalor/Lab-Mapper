@@ -4,6 +4,8 @@ import os
 import streamlit as st
 from suite_nav import render_suite_sidebar      # Menú lateral unificado
 from guardian import login_guard                # Guardián central de acceso
+from ui.styles import inject_global_styles
+from ui.components import render_app_header, render_info_panel, render_kpi_row, render_module_card, render_section
 
 # =========================
 #   CONFIG UI BÁSICA
@@ -15,17 +17,8 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None, "About": None},
 )
 
-# Oculta UI sobrante de Streamlit
-st.markdown(
-    """
-<style>
-#MainMenu {visibility: hidden;}
-header {visibility: hidden;}
-footer {visibility: hidden;}
-</style>
-""",
-    unsafe_allow_html=True,
-)
+# Tema visual profesional compartido
+inject_global_styles()
 
 # =========================
 #   UTILIDADES DE PÁGINAS
@@ -61,18 +54,13 @@ def launcher():
         or st.session_state.get("user_name")
         or ""
     )
-    if username:
-        saludo = (
-            f"Acceso concedido. Bienvenido, {username}. "
-            f"Go Mapper Suite. Gonzalo Romero"
-        )
-    else:
-        saludo = "Acceso concedido a Go Mapper Suite."
-    st.success(saludo)
+    saludo = f"Sesión activa: {username}" if username else "Sesión activa"
 
-    # Título principal
-    st.markdown("# Go Mapper Suite")
-    st.caption("Portada & lanzador de módulos")
+    render_app_header(
+        "Go Mapper Suite",
+        "Plataforma operativa para limpieza, homologación, análisis pericial, mapas y productos KMZ/KML de CDR.",
+        badges=[saludo, "Laboratorio seguro", "Suite multipágina"],
+    )
 
     # Descubrimos todas las páginas disponibles en /pages
     pages = discover_pages()
@@ -85,48 +73,56 @@ def launcher():
             "title": "🧹 Limpieza",
             "desc": "Convierte CDR crudos en un Excel limpio con geocodificación, estadísticos y log completo.",
             "button": "Abrir Limpieza",
+            "tag": "Preparación",
         },
         {
             "fname": "app_mapper_azimuth.py",
             "title": "🛰️ KMZ Azimut",
             "desc": "Genera KMZ con sectores de cobertura, azimuth, brújula/overlay y animaciones por día.",
             "button": "Abrir KMZ Azimut",
+            "tag": "Geográfico",
         },
         {
             "fname": "app_sentinel_mapper_kmz_pro.py",
             "title": "🌎 Sentinel Mapper KMZ Pro",
             "desc": "Genera KMZ avanzado con antenas, eventos, cobertura, azimuth, brújula, rutas cronológicas y popups profesionales.",
             "button": "Abrir KMZ Pro",
+            "tag": "Geográfico Pro",
         },
         {
             "fname": "app_linea_tiempo.py",
             "title": "📅 Línea de tiempo",
             "desc": "Construye cronologías por eventos con vistas ligera y detallada, listas para imprimir o exportar.",
             "button": "Abrir Línea de tiempo",
+            "tag": "Análisis",
         },
         {
             "fname": "app_link_analysis.py",
             "title": "🔗 Análisis de vínculos",
             "desc": "Grafo de relaciones entre números, con métricas de red y exportables para dictamen.",
             "button": "Abrir Análisis de vínculos",
+            "tag": "Redes",
         },
         {
             "fname": "app armonizador a telcel.py",
             "title": "🔁 Armonizador",
             "desc": "Normaliza CDRs de diversas compañías al esquema Telcel de 11 columnas para trabajar todo unificado.",
             "button": "Abrir Armonizador",
+            "tag": "Homologación",
         },
         {
             "fname": "app_consulta_visual.py",
             "title": "📊 Consulta visual",
             "desc": "Explora y filtra CDR ya procesados con tablas, vistas gráficas y descargas rápidas para análisis.",
             "button": "Abrir Consulta visual",
+            "tag": "Exploración",
         },
         {
             "fname": "app_maestro_ubicaciones.py",
             "title": "📍 Maestro de ubicaciones",
             "desc": "Administra el catálogo maestro de antenas y direcciones (PlusRepo / maestro_ubicaciones.sqlite).",
             "button": "Abrir Maestro de ubicaciones",
+            "tag": "Catálogo",
         },
 
         # ====== NUEVOS MÓDULOS ======
@@ -135,43 +131,59 @@ def launcher():
             "title": "🧠 ORÁCULO CDR",
             "desc": "Consulta inteligente sobre CDR limpia: pregunta → intent → evidencia (filas soporte) + exportables.",
             "button": "Abrir ORÁCULO CDR",
+            "tag": "Consulta IA",
         },
         {
             "fname": "app_grafo_inteligente.py",
             "title": "🕸️ Grafo Inteligente",
             "desc": "Control de gráficos: cargar/editar nodos y aristas, export JSON/Excel y render visual (si hay pyvis).",
             "button": "Abrir Grafo Inteligente",
+            "tag": "Grafo",
         },
         {
             "fname": "app_lex_cdr.py",
             "title": "📚 LEX CDR",
             "desc": "Manual/FAQ legal CDR: soporte metodológico + fundamento legal + redacción sugerida lista para dictamen.",
             "button": "Abrir LEX CDR",
+            "tag": "Legal",
         },
     ]
 
-    # Tarjetas en 4 columnas (se acomodan en varias filas)
-    cols = st.columns(4)
+    existing_modules = [m for m in modules if page_by_fname.get(m["fname"])]
+    missing_modules = [m for m in modules if not page_by_fname.get(m["fname"])]
+
+    render_kpi_row(
+        [
+            {"label": "Módulos activos", "value": len(existing_modules), "help": "Páginas disponibles en la suite"},
+            {"label": "Flujo recomendado", "value": "Limpieza → Consulta → KMZ", "help": "Ruta operativa base"},
+            {"label": "Modo", "value": "Laboratorio", "help": "Cambios seguros por etapas"},
+        ],
+        columns=3,
+    )
+
+    render_section("Centro de operaciones", "Accesos rápidos a los módulos principales de la suite.", "▦")
+
+    cols = st.columns(3)
     for i, mod in enumerate(modules):
-        col = cols[i % 4]
+        col = cols[i % 3]
         with col:
-            st.markdown(f"### {mod['title']}")
-            st.write(mod["desc"])
             rel = page_by_fname.get(mod["fname"])
+            render_module_card(mod["title"], mod["desc"], mod.get("tag", "Módulo"))
             if rel:
                 st.page_link(rel, label=f"➡️ {mod['button']}")
             else:
                 st.warning("Módulo no encontrado en /pages.", icon="⚠️")
 
-    # Sugerencias de uso
-    st.markdown("---")
-    st.markdown("#### Sugerencias de uso para rendimiento")
-    st.markdown(
-        """
-        - Ejecuta **Limpieza** primero en modo **Solo caché/PlusRepo**.
-        - Si faltan direcciones, corre una segunda pasada en **Completo** con un límite (200–300).
-        - Divide lotes grandes en tandas más pequeñas para evitar errores 503.
-        """
+    if missing_modules:
+        render_info_panel(
+            "Módulos pendientes",
+            "Algunos accesos están declarados en la suite pero todavía no tienen archivo de página disponible. Se muestran como advertencia para no ocultar el estado del laboratorio.",
+        )
+
+    render_section("Sugerencias operativas", "Buenas prácticas para procesar lotes grandes sin saturar geocoding ni la sesión.", "◌")
+    render_info_panel(
+        "Rendimiento recomendado",
+        "Ejecuta Limpieza primero con caché/PlusRepo cuando aplique; si faltan direcciones, realiza una segunda pasada limitada y divide lotes grandes en tandas controladas.",
     )
 
 

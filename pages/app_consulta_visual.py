@@ -8,6 +8,7 @@ from io import BytesIO
 # 🔐 Guardián central de la suite + navegación
 from guardian import login_guard
 from suite_nav import render_suite_sidebar  # menú lateral de la suite
+from ui.styles import apply_theme, kpi_row, page_header, section_title
 
 # tus otros imports...
 
@@ -17,24 +18,13 @@ login_guard()
 # --- MENÚ LATERAL DE LA SUITE ---
 render_suite_sidebar()
 
-# --- Layout ancho para esta página ---
-st.markdown(
-    """
-    <style>
-        .block-container {
-            max-width: 1500px !important;  /* más ancho que el default */
-            padding-top: 1rem;
-            padding-bottom: 2rem;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_theme()
 
-st.title("🔍 Consulta visual de CDR")
-st.caption(
-    "Filtro visual para explorar tráfico telefónico generado por la Suite Go Mapper "
-    "(Limpieza / Lite). El mapeo de columnas es automático."
+page_header(
+    "Consulta visual de CDR",
+    "Explora archivos limpios de la suite con filtros técnicos, tabla operativa y exportación inmediata de resultados.",
+    eyebrow="EXPLORACIÓN Y FILTRADO",
+    badges=["Mapeo automático", "Filtros por tiempo", "Exportación Excel"],
 )
 
 # --------------------------------------------------------------------
@@ -196,7 +186,7 @@ def construir_df_estandar(df):
 # 1) Carga de archivo (o df de sesión)
 # --------------------------------------------------------------------
 
-st.subheader("1️⃣ Cargar datos")
+section_title("Cargar datos", "Usa datos de sesión o sube un Excel limpio generado por la suite.", "01")
 
 df = None
 origen = None
@@ -231,7 +221,7 @@ st.write(f"Columnas detectadas ({len(df.columns)}):", ", ".join(map(str, df.colu
 # 2) Detección automática de campos
 # --------------------------------------------------------------------
 
-st.subheader("2️⃣ Detección automática de campos")
+section_title("Detección automática de campos", "Verifica cómo se homologaron los campos para la vista de consulta.", "02")
 
 df_view, mapping = construir_df_estandar(df)
 
@@ -263,7 +253,7 @@ if "LINEA" in df_view.columns:
 # 3) Panel de filtros
 # --------------------------------------------------------------------
 
-st.subheader("3️⃣ Filtros")
+section_title("Filtros", "Acota el universo por número, tipo, rango temporal, duración, IMEI o geolocalización.", "03")
 
 with st.expander("🎛️ Filtros básicos", expanded=True):
     col_a, col_b, col_tipo = st.columns(3)
@@ -410,20 +400,18 @@ if "Datetime" in df_filtrado.columns:
 # 5) Resumen + tabla + descarga
 # --------------------------------------------------------------------
 
-st.subheader("4️⃣ Resultado")
+section_title("Resultado", "Registros filtrados listos para revisión o descarga.", "04")
 
-col_r1, col_r2, col_r3 = st.columns(3)
-with col_r1:
-    st.metric("Registros filtrados", len(df_filtrado))
-with col_r2:
-    if "NUM_B" in df_filtrado.columns:
-        st.metric("Números B distintos", df_filtrado["NUM_B"].nunique())
-with col_r3:
-    if "Datetime" in df_filtrado.columns and not df_filtrado.empty:
-        st.metric(
-            "Rango de fechas",
-            f"{df_filtrado['Datetime'].min().date()} → {df_filtrado['Datetime'].max().date()}",
-        )
+kpis = [{"label": "Registros filtrados", "value": len(df_filtrado), "help": "Filas que cumplen criterios"}]
+if "NUM_B" in df_filtrado.columns:
+    kpis.append({"label": "Números B distintos", "value": df_filtrado["NUM_B"].nunique(), "help": "Contrapartes únicas"})
+if "Datetime" in df_filtrado.columns and not df_filtrado.empty:
+    kpis.append({
+        "label": "Rango de fechas",
+        "value": f"{df_filtrado['Datetime'].min().date()} → {df_filtrado['Datetime'].max().date()}",
+        "help": "Ventana temporal filtrada",
+    })
+kpi_row(kpis, columns=3)
 
 df_display = df_filtrado.copy()
 

@@ -15,6 +15,8 @@ import streamlit.components.v1 as components
 # 🔐 Guardián central de la suite
 from guardian import login_guard
 from suite_nav import render_suite_sidebar  # menú lateral de la suite
+from ui.styles import apply_theme, kpi_row
+from ui.components import render_card, render_page_header, render_section, render_step_header
 
 # pyvis para grafo interactivo
 try:
@@ -268,21 +270,13 @@ def main():
 
     # Menú lateral de la Suite Go Mapper
     render_suite_sidebar()
+    apply_theme()
 
-    st.title("🔗 Análisis de vínculos (Link Analysis)")
-
-    # Ampliar el ancho de la página
-    st.markdown(
-        """
-        <style>
-        .block-container {
-            max-width: 100% !important;
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
+    render_page_header(
+        "Análisis de vínculos",
+        "Construye grafos dirigidos de relaciones A/B con métricas de grado, volumen y evidencia tabular auxiliar.",
+        status="ANÁLISIS DE RED",
+        tags=["PyVis", "Top contactos", "Exportables"],
     )
 
     if Network is None:
@@ -303,27 +297,29 @@ def main():
         opciones_origen.append("Usar datos limpios de la Suite (df_limpio)")
     opciones_origen.append("Subir archivo Excel")
 
-    origen = st.radio(
-        "Origen de los datos",
-        opciones_origen,
-        horizontal=True,
-        key="link_origen_datos",
-    )
-
-    df = None
-    if origen == "Usar datos limpios de la Suite (df_limpio)":
-        df = df_session.copy()
-    else:
-        archivo = st.file_uploader(
-            "Sube un archivo de Excel ya limpio / armonizado",
-            type=["xlsx", "xls"],
+    with render_card():
+        render_step_header("01", "Filtros / origen", "Selecciona el origen del CDR y controla el universo antes de crear el grafo.")
+        origen = st.radio(
+            "Origen de los datos",
+            opciones_origen,
+            horizontal=True,
+            key="link_origen_datos",
         )
-        if archivo is not None:
-            try:
-                df = pd.read_excel(archivo)
-            except Exception as e:
-                st.error(f"No pude leer el Excel: {e}")
-                return
+
+        df = None
+        if origen == "Usar datos limpios de la Suite (df_limpio)":
+            df = df_session.copy()
+        else:
+            archivo = st.file_uploader(
+                "Sube un archivo de Excel ya limpio / armonizado",
+                type=["xlsx", "xls"],
+            )
+            if archivo is not None:
+                try:
+                    df = pd.read_excel(archivo)
+                except Exception as e:
+                    st.error(f"No pude leer el Excel: {e}")
+                    return
 
     if df is None:
         st.info(
@@ -366,6 +362,8 @@ def main():
         and col_numB_guess in df.columns
     )
 
+    render_section("Columnas", "Mapeo de columnas clave para construir relaciones A/B.", "02")
+
     if auto_ok:
         col_numA = col_numA_guess
         col_numB = col_numB_guess
@@ -382,7 +380,7 @@ def main():
                 f"- Duración: **{col_dur}**"
             )
     else:
-        st.subheader("1️⃣ Mapeo de columnas clave")
+        # Mapeo manual solo cuando la detección automática no fue suficiente.
         c1, c2, c3 = st.columns(3)
 
         with c1:
@@ -453,35 +451,36 @@ def main():
     # -------------------------
     # 3) Filtros básicos
     # -------------------------
-    st.subheader("2️⃣ Filtros básicos antes del grafo")
+    with render_card():
+        render_step_header("03", "Filtros", "Ajusta densidad, periodo y tipos de evento antes de construir la red.")
 
-    if col_fecha:
-        df[col_fecha] = pd.to_datetime(df[col_fecha], errors="coerce")
+        if col_fecha:
+            df[col_fecha] = pd.to_datetime(df[col_fecha], errors="coerce")
 
-    filtros_col1, filtros_col2, filtros_col3 = st.columns(3)
+        filtros_col1, filtros_col2, filtros_col3 = st.columns(3)
 
-    with filtros_col1:
-        st.markdown("**Modo de grafo:** dirigido según quién llama a quién")
+        with filtros_col1:
+            st.markdown("**Modo de grafo:** dirigido según quién llama a quién")
 
-    with filtros_col2:
-        max_nodos = st.slider(
-            "Máximo de nodos a mostrar en el grafo",
-            min_value=10,
-            max_value=300,
-            value=80,
-            step=10,
-            help="Para evitar que el grafo se vuelva inmanejable en CDR muy grandes.",
-        )
+        with filtros_col2:
+            max_nodos = st.slider(
+                "Máximo de nodos a mostrar en el grafo",
+                min_value=10,
+                max_value=300,
+                value=80,
+                step=10,
+                help="Para evitar que el grafo se vuelva inmanejable en CDR muy grandes.",
+            )
 
-    with filtros_col3:
-        min_llamadas = st.slider(
-            "Mínimo de eventos totales por vínculo",
-            min_value=1,
-            max_value=50,
-            value=1,
-            step=1,
-            help="Solo se dibujan enlaces con al menos este número de eventos (sumando todos los tipos).",
-        )
+        with filtros_col3:
+            min_llamadas = st.slider(
+                "Mínimo de eventos totales por vínculo",
+                min_value=1,
+                max_value=50,
+                value=1,
+                step=1,
+                help="Solo se dibujan enlaces con al menos este número de eventos (sumando todos los tipos).",
+            )
 
     # Filtro por fecha
     if col_fecha:
@@ -652,12 +651,17 @@ def main():
     # -------------------------
     # 6) Métricas rápidas
     # -------------------------
-    st.subheader("3️⃣ Métricas rápidas de la red")
+    render_section("Métricas rápidas", "Lectura ejecutiva de centralidad y volumen antes de revisar el grafo.", "04")
+    kpi_row([
+        {"label": "Nodos", "value": f"{len(df_nodes):,}", "help": "Números en la red"},
+        {"label": "Vínculos", "value": f"{len(df_edges):,}", "help": "Relaciones dirigidas"},
+        {"label": "Eventos", "value": f"{int(df_edges['conteo'].sum()):,}", "help": "Eventos agregados"},
+    ], columns=3)
 
     col_m1, col_m2 = st.columns(2)
 
     with col_m1:
-        st.markdown("**Top 10 por grado (número de contactos distintos)**")
+        render_step_header("A", "Top 10 por grado", "Números con más contactos distintos.")
         tabla_grado = (
             df_nodes.sort_values("grado", ascending=False)[
                 ["numero", "grado", "total_eventos"]
@@ -668,7 +672,7 @@ def main():
         st.dataframe(tabla_grado, use_container_width=True)
 
     with col_m2:
-        st.markdown("**Top 10 por volumen (total de eventos)**")
+        render_step_header("B", "Top 10 por volumen", "Números con mayor actividad agregada.")
         tabla_volumen = (
             df_nodes.sort_values("total_eventos", ascending=False)[
                 ["numero", "total_eventos", "grado"]
@@ -681,7 +685,7 @@ def main():
     # -------------------------
     # 7) Grafo interactivo
     # -------------------------
-    st.subheader("4️⃣ Grafo interactivo")
+    render_section("Grafo interactivo", "Visual principal de relaciones; las tablas quedan como evidencia auxiliar.", "05")
 
     opciones_nums = df_nodes["numero"].astype(str).tolist()
     if not opciones_nums:
@@ -918,7 +922,7 @@ def main():
     # -------------------------
     # 8) Descargas
     # -------------------------
-    st.subheader("5️⃣ Descargas (tablas y grafo)")
+    render_section("Tablas de soporte y descargas", "Exportables auxiliares para respaldar el análisis visual.", "06")
 
     col_d1, col_d2, col_d3 = st.columns(3)
 

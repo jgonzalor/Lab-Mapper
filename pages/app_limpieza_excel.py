@@ -21,6 +21,7 @@ import requests
 import streamlit as st
 from guardian import login_guard
 from suite_nav import render_suite_sidebar  # ✅ Navegación unificada de la suite
+from ui.styles import apply_theme, info_panel, page_header, section_title
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -45,15 +46,7 @@ login_guard("Limpieza de CDR")
 # ===========================
 # UI BLINDADA + NAVEGACIÓN
 # ===========================
-st.markdown("""
-<style>
-[data-testid="stToolbar"]{display:none!important;}
-[class*="viewerBadge_link__"],[class*="viewerBadge_container__"]{display:none!important;}
-#MainMenu{visibility:hidden;} footer{visibility:hidden;}
-.stDeployButton{display:none!important;}
-div[data-testid="stStatusWidget"]{display:none!important;}
-</style>
-""", unsafe_allow_html=True)
+apply_theme()
 
 # Navegación lateral estándar de la suite
 try:
@@ -1738,12 +1731,13 @@ def limpiar_excel(file, remove_duplicates: bool = False):
 # ===========================
 # UI
 # ===========================
-st.title("🧹 Go Mapper — Limpieza Automática")
-st.write(
-    "Sube un archivo CSV/XLS/XLSX. Se limpian coordenadas/azimuth, se generan PLUS_CODE, "
-    "dirección por coordenada (con fallback PLUS+Admin) y estadísticas (VOZ/DATOS/SMS)."
+page_header(
+    "Limpieza Automática",
+    "Prepara CDR crudos para análisis: coordenadas, azimuth, PLUS_CODE, dirección derivada, deduplicación opcional y estadísticas exportables.",
+    eyebrow="PREPARACIÓN DE EVIDENCIA",
+    badges=["CSV · XLS · XLSX", "Excel limpio", "Trazabilidad básica"],
 )
-st.caption(f"PlusRepo: {PLUS_REPO_DB}")
+info_panel("Repositorio de ubicaciones", f"PlusRepo activo: {PLUS_REPO_DB}")
 
 try:
     _olc_demo = olc.encode(19.4326, -99.1332, codeLength=10)
@@ -1751,6 +1745,7 @@ try:
 except Exception as _e:
     st.error(f"[Sanity OLC] Falló: {_e}")
 
+section_title("Carga y opciones", "Selecciona el archivo crudo y activa solo las opciones necesarias para el caso.", "01")
 remove_dups = st.checkbox(
     "eliminar celda de Datos duplicada, (el consumo de datos se repite hasta 3,4 veces esto unifica en 1 solo registro)",
     value=False,

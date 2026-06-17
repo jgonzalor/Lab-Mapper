@@ -13,6 +13,9 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+from suite_nav import render_suite_sidebar
+from ui.styles import apply_theme, kpi_row
+from ui.components import render_card, render_page_header, render_section, render_step_header
 
 APP_TITLE = "🕸️ Grafo Inteligente de Relaciones (MAPPER) — v2"
 
@@ -40,26 +43,36 @@ def try_render_pyvis(nodos: pd.DataFrame, aristas: pd.DataFrame):
 
 def main():
     st.set_page_config(page_title="Grafo Inteligente (MAPPER)", layout="wide")
-    st.title(APP_TITLE)
-    st.caption("Carga/edita/exporta. Render visual opcional si tienes pyvis instalado.")
+    render_suite_sidebar()
+    apply_theme()
+    render_page_header(
+        "Grafo Inteligente",
+        "Carga, edita y exporta nodos/aristas con una vista visual opcional para análisis de relaciones.",
+        status="GRAFO OPERATIVO",
+        tags=["JSON", "Excel", "PyVis opcional"],
+    )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        up = st.file_uploader("Cargar JSON o Excel (NODOS/ARISTAS)", type=["json","xlsx"])
-        load = st.button("Cargar", type="primary")
-    with col2:
-        if "nodos" in st.session_state and "aristas" in st.session_state:
-            nodos = st.session_state["nodos"]
-            aristas = st.session_state["aristas"]
-            st.download_button("⬇️ Exportar Excel", data=df_to_excel_bytes(nodos, aristas),
-                               file_name=f"GRAFO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                               use_container_width=True)
-            payload = {"nodos": nodos.to_dict(orient="records"), "aristas": aristas.to_dict(orient="records")}
-            st.download_button("⬇️ Exportar JSON", data=json.dumps(payload, ensure_ascii=False, indent=2),
-                               file_name=f"GRAFO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                               mime="application/json",
-                               use_container_width=True)
+    with render_card():
+        render_step_header("01", "Filtros / carga", "Carga el grafo base y exporta el estado actual cuando exista en sesión.")
+        col1, col2 = st.columns(2)
+        with col1:
+            up = st.file_uploader("Cargar JSON o Excel (NODOS/ARISTAS)", type=["json","xlsx"])
+            load = st.button("Cargar", type="primary")
+        with col2:
+            if "nodos" in st.session_state and "aristas" in st.session_state:
+                nodos = st.session_state["nodos"]
+                aristas = st.session_state["aristas"]
+                st.download_button("⬇️ Exportar Excel", data=df_to_excel_bytes(nodos, aristas),
+                                   file_name=f"GRAFO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                   use_container_width=True)
+                payload = {"nodos": nodos.to_dict(orient="records"), "aristas": aristas.to_dict(orient="records")}
+                st.download_button("⬇️ Exportar JSON", data=json.dumps(payload, ensure_ascii=False, indent=2),
+                                   file_name=f"GRAFO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                                   mime="application/json",
+                                   use_container_width=True)
+            else:
+                st.caption("Sin grafo cargado todavía.")
 
     if load and up:
         if up.name.endswith(".json"):
@@ -87,8 +100,13 @@ def main():
     nodos = st.session_state["nodos"]
     aristas = st.session_state["aristas"]
 
-    st.divider()
-    st.subheader("🧩 Edición (tablas)")
+    render_section("Métricas rápidas", "Resumen del grafo cargado antes de editar o renderizar.", "02")
+    kpi_row([
+        {"label": "Nodos", "value": f"{len(nodos):,}", "help": "Entidades disponibles"},
+        {"label": "Aristas", "value": f"{len(aristas):,}", "help": "Relaciones disponibles"},
+    ], columns=2)
+
+    render_section("Tablas de soporte", "Edición tabular de nodos y aristas; funciona como evidencia auxiliar del grafo.", "03")
     c1, c2 = st.columns(2)
     with c1:
         st.write("**NODOS**")
@@ -97,8 +115,7 @@ def main():
         st.write("**ARISTAS**")
         st.session_state["aristas"] = st.data_editor(aristas, num_rows="dynamic", use_container_width=True, height=320)
 
-    st.divider()
-    st.subheader("👁️ Render visual")
+    render_section("Grafo interactivo", "Visual principal de relaciones basado en los nodos y aristas actuales.", "04")
     rendered = try_render_pyvis(st.session_state["nodos"], st.session_state["aristas"])
     if not rendered:
         st.info("No se pudo renderizar (pyvis no instalado). Puedes instalarlo o quedarte con la vista tabular.")
