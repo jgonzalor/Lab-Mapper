@@ -135,9 +135,9 @@ def launcher():
         },
         {
             "fname": "app_grafo_inteligente.py",
-            "title": "🕸️ Grafo Inteligente",
-            "desc": "Control de gráficos: cargar/editar nodos y aristas, export JSON/Excel y render visual (si hay pyvis).",
-            "button": "Abrir Grafo Inteligente",
+            "title": "🗺️ Sentinel Mapa Investigativo",
+            "desc": "Investigación multi-CDR: casos, mapa, vínculos, cronología y evidencia con guardado local.",
+            "button": "Abrir Sentinel Mapa Investigativo",
             "tag": "Grafo",
         },
         {
