@@ -28,36 +28,44 @@ def choose_case(actor):
     return st.session_state.get('sentinel_case')
 
 def case_actions(s):
-    with st.expander('Importar CDR / respaldo / datos del caso'):
-        st.caption('Un caso admite varias líneas. Se procesa únicamente Datos_Limpios; se preserva cada Excel original.')
-        uploads=st.file_uploader('Excel de Go Mapper Limpieza',type=['xlsx'],accept_multiple_files=True,key='sentinel_uploads')
-        col1,col2=st.columns(2)
-        import json
-        policy=json.loads(s.meta('import_options') or '{}')
-        with col1:seconds=st.number_input('Tolerancia de espejo (segundos)',0,30,int(policy.get('dedup_seconds',0)),disabled=bool(policy))
-        with col2:dur=st.number_input('Tolerancia de duración (segundos)',0,5,int(policy.get('duration_tolerance',0)),disabled=bool(policy))
-        st.caption('Hora sin zona: America/Mazatlan por convención, sin desplazamiento. A=origen; B=destino. Empates no se fusionan.')
-        if st.button('Importar y analizar',type='primary',disabled=not uploads):
-            try:
-                with st.spinner('Validando, preservando evidencia y correlacionando…'):
-                    result=import_files(s,[(u.name,u.getvalue()) for u in uploads],ImportOptions(dedup_seconds=seconds,duration_tolerance=dur))
-                    result['correlation']=correlate(s)
-                st.session_state['sentinel_notice']=result;rerun()
-            except Exception as e:st.error('Importación no completada: '+str(e))
-        if 'sentinel_notice' in st.session_state:st.success(str(st.session_state.pop('sentinel_notice')))
-        if st.button('Preparar respaldo completo'):
-            try:
-                st.session_state['sentinel_backup']=(str(s.path),export_case(s),int(s.meta('revision')))
-            except Exception as e:st.error(str(e))
-        backup=st.session_state.get('sentinel_backup')
-        if backup and backup[0]==str(s.path):
-            if backup[2]!=int(s.meta('revision')):st.info('El caso cambió: prepara un nuevo respaldo para incluir los cambios recientes.')
-            st.download_button('Descargar investigación (.zip)',backup[1],file_name='SENTINEL_CASO.zip',mime='application/zip')
-        with st.form('sentinel_case_metadata'):
-            name=st.text_input('Nombre del caso',value=s.meta('name'));desc=st.text_area('Observaciones del caso',value=s.meta('description'));investigator=st.text_input('Investigador responsable',value=s.meta('investigator'))
-            if st.form_submit_button('Guardar datos del caso'):
-                try:s.update_case(name,desc,investigator);rerun()
-                except ValueError as e:st.error(str(e))
+    with st.expander('Gestionar caso · cargar archivos, respaldar y editar datos'):
+        load_tab,backup_tab,info_tab=st.tabs(['1 · Cargar CDR','2 · Respaldo','3 · Datos del caso'])
+        with load_tab:
+            st.caption('Un caso admite varias líneas. Se procesa únicamente Datos_Limpios; se preserva cada Excel original.')
+            uploads=st.file_uploader('Excel de Go Mapper Limpieza',type=['xlsx'],accept_multiple_files=True,key='sentinel_uploads')
+            col1,col2=st.columns(2)
+            import json
+            policy=json.loads(s.meta('import_options') or '{}')
+            with col1:seconds=st.number_input('Tolerancia de espejo (segundos)',0,30,int(policy.get('dedup_seconds',0)),disabled=bool(policy))
+            with col2:dur=st.number_input('Tolerancia de duración (segundos)',0,5,int(policy.get('duration_tolerance',0)),disabled=bool(policy))
+            st.caption('Hora sin zona: America/Mazatlan por convención, sin desplazamiento. A=origen; B=destino. Empates no se fusionan.')
+            if st.button('Importar y analizar',type='primary',disabled=not uploads):
+                try:
+                    with st.spinner('Validando, preservando evidencia y correlacionando…'):
+                        result=import_files(s,[(u.name,u.getvalue()) for u in uploads],ImportOptions(dedup_seconds=seconds,duration_tolerance=dur))
+                        result['correlation']=correlate(s)
+                    st.session_state['sentinel_notice']=result;rerun()
+                except Exception as e:st.error('Importación no completada: '+str(e))
+            if 'sentinel_notice' in st.session_state:
+                st.success('Importación y análisis completados. Explora los resultados en Mapa, Relaciones y Análisis.')
+                with st.container():
+                    st.json(st.session_state.pop('sentinel_notice'))
+        with backup_tab:
+            st.caption('Descarga un paquete con la investigación, sus Excel originales y evidencias para recuperarla después.')
+            if st.button('Preparar respaldo completo'):
+                try:
+                    st.session_state['sentinel_backup']=(str(s.path),export_case(s),int(s.meta('revision')))
+                except Exception as e:st.error(str(e))
+            backup=st.session_state.get('sentinel_backup')
+            if backup and backup[0]==str(s.path):
+                if backup[2]!=int(s.meta('revision')):st.info('El caso cambió: prepara un nuevo respaldo para incluir los cambios recientes.')
+                st.download_button('Descargar investigación (.zip)',backup[1],file_name='SENTINEL_CASO.zip',mime='application/zip')
+        with info_tab:
+            with st.form('sentinel_case_metadata'):
+                name=st.text_input('Nombre del caso',value=s.meta('name'));desc=st.text_area('Observaciones del caso',value=s.meta('description'));investigator=st.text_input('Investigador responsable',value=s.meta('investigator'))
+                if st.form_submit_button('Guardar datos del caso'):
+                    try:s.update_case(name,desc,investigator);rerun()
+                    except ValueError as e:st.error(str(e))
         st.caption('Las modificaciones se guardan en disco al confirmar cada acción. El ZIP incluye base de datos, originales y evidencias.')
         if st.button('Cerrar investigación'):
             for k in ('sentinel_case','sentinel_selected','sentinel_backup'):st.session_state.pop(k,None)
