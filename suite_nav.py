@@ -104,7 +104,7 @@ def render_suite_sidebar():
                     ("pages/app_linea_tiempo.py", "📅 Línea de tiempo"),
                     ("pages/app_link_analysis.py", "🔗 Análisis de vínculos"),
                     ("pages/app_oraculo_cdr.py", "🧠 ORÁCULO CDR"),
-                    ("pages/app_grafo_inteligente.py", "🕸️ Grafo Inteligente"),
+                    ("pages/app_grafo_inteligente.py", "🗺️ Sentinel Mapa Investigativo"),
                 ],
             ),
             (
