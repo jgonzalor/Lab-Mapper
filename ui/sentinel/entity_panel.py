@@ -1,4 +1,5 @@
 import json
+from html import escape
 import streamlit as st
 from core.sentinel import queries
 from core.sentinel.models import ENTITY_TYPES,CONFIDENCE,RELATION_TYPES
@@ -76,11 +77,18 @@ def evidence_table(s,subject,key='support'):
 
 def detail_panel(s,selected):
     st.markdown('**Ficha de investigación**')
-    if not selected:st.info('Selecciona una entidad, relación o hallazgo.');return
+    if not selected:
+        st.info('Selecciona un punto del mapa o un nodo del grafo para explorar su ficha.')
+        st.caption('Aquí verás sus atributos, confianza y registros de origen. También puedes buscar un elemento en el panel izquierdo.')
+        return
     item=queries.entity(s,selected)
     if item:
         st.subheader(item['display_label']);st.caption(item['kind']+' · '+item['origin'])
-        attrs=item['effective_attrs'];st.write({k:v for k,v in attrs.items() if v not in ('',None)})
+        attrs=item['effective_attrs']
+        st.markdown('<span class="sentinel-badge">'+escape(item.get('confidence') or 'CONFIRMADO')+'</span>',unsafe_allow_html=True)
+        for k,v in attrs.items():
+            if v not in ('',None):
+                st.markdown('<div class="sentinel-field"><small>'+escape(k.replace('_',' '))+'</small>'+escape(str(v))+'</div>',unsafe_allow_html=True)
         if item.get('note'):st.write(item['note'])
         if item['kind']=='ANTENA':
             sectors=s.rows('SELECT entity_id,azimuth,plus_code,address FROM locations WHERE site_key=(SELECT site_key FROM locations WHERE entity_id=?)',(selected,))
@@ -91,8 +99,12 @@ def detail_panel(s,selected):
         if not matches:st.info('La selección ya no existe tras recalcular; selecciona de nuevo.');return
         item=matches[0];st.subheader(item['kind'])
         for endpoint in ('source','destination'):
-            v=queries.entity(s,item[endpoint]);st.write(endpoint+': '+(v['display_label'] if v else item[endpoint]))
-        st.write({k:v for k,v in item.items() if k not in ('source','destination','id')})
+            v=queries.entity(s,item[endpoint]);st.markdown('**'+('Origen' if endpoint=='source' else 'Destino')+'**');st.write(v['display_label'] if v else item[endpoint])
+        if 'event_count' in item:
+            st.metric('Eventos soporte',item['event_count'])
+            st.caption(str(item.get('record_count',0))+' registros CDR asociados')
+        with st.expander('Atributos del vínculo / hallazgo'):
+            st.write({k:v for k,v in item.items() if k not in ('source','destination','id')})
         ann=s.rows('SELECT * FROM annotations WHERE subject_id=?',(selected,))
         if ann:st.write({'Interpretación del investigador':ann[0]['note'],'Confianza revisada':ann[0]['confidence'],'Fuente':ann[0]['source']})
         attrs={};current_confidence=(ann[0]['confidence'] if ann else None) or item['confidence']

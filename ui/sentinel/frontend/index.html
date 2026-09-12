@@ -1,3 +1,15 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><link rel="stylesheet" href="vendor/leaflet.css"><style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#18324b}#bar{height:42px;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12px;border-bottom:1px solid #c9d9e8;background:#fff}button{background:#e7eff7;border:1px solid #bfd0e0;border-radius:5px;padding:5px 9px;color:#174b76;cursor:pointer}#canvas{height:555px;width:100%;position:relative;background:radial-gradient(#dce6ef 1px,transparent 1px);background-size:18px 18px}svg{height:100%;width:100%}.node{cursor:grab}.edge{cursor:pointer}.edge:hover{stroke:#bb8f2e;stroke-width:5}text{user-select:none}#legend{height:34px;padding:9px;font-size:11px;background:#fff;color:#526b80}#tip{position:absolute;display:none;background:#fff;border:1px solid #a7bbcd;padding:8px;pointer-events:none;z-index:1000;font-size:12px;max-width:300px}.leaflet-container{background:#e5edf3}.leaflet-popup-content{max-width:260px;line-height:1.5}#empty{padding:60px;text-align:center;color:#61778a}
-</style></head><body><div id="bar"><strong id="title">SENTINEL · Investigación visual</strong><div><span id="count"></span> <button id="reset">Centrar</button></div></div><div id="canvas"></div><div id="legend">● Objetivo · ● Contacto · ◆ Dispositivo · Selecciona un elemento para consultar evidencia.</div><script src="vendor/leaflet.js"></script><script src="canvas.js"></script></body></html>
+
+body{border:1px solid #cbd9e5;border-radius:14px;overflow:hidden;background:#f7fafc}
+#bar{height:48px;background:#132e47;color:#eef6fc;border:0;padding:10px 16px;gap:10px}
+#title{font-size:11px;letter-spacing:.1em}#count{font-size:11px;opacity:.8}
+button{background:#24455e;color:#fff;border:1px solid #557087;border-radius:7px;padding:6px 10px}
+button:hover,button:focus-visible{background:#356581;outline:2px solid #d7b967;outline-offset:2px}
+#canvas{height:535px;background-color:#f6f9fc}#legend{height:46px;line-height:1.5;padding:8px 14px;border-top:1px solid #dce6ef}
+.node text{paint-order:stroke;stroke:#f6f9fc;stroke-width:4px;stroke-linejoin:round}
+.node:focus-visible{outline:none}.node:focus-visible circle,.node:focus-visible rect{stroke:#bc8618;stroke-width:4px}
+.edge:focus-visible{stroke:#bc8618;stroke-width:5px;outline:none}
+.leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 8px 25px #18324b26}
+@media(max-width:550px){#bar{padding:8px}#title{max-width:120px}#count{display:none}#legend{font-size:10px}}
+</style></head><body><div id="bar"><strong id="title">SENTINEL · Investigación visual</strong><div><span id="count"></span> <button id="zoom-out" aria-label="Alejar">−</button> <button id="zoom-in" aria-label="Acercar">+</button> <button id="reset">Centrar</button></div></div><div id="canvas"></div><div id="legend">● Objetivo · ● Contacto · ◆ Dispositivo · Selecciona un elemento para consultar evidencia.</div><script src="vendor/leaflet.js"></script><script src="canvas.js"></script></body></html>

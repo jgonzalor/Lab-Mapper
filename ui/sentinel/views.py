@@ -14,8 +14,10 @@ def canvas_selection(result,allowed):
         st.session_state['sentinel_canvas_nonce']=result['nonce'];st.session_state['sentinel_selected']=result['id'];st.rerun()
 
 def map_view(s,target,selected):
-    tiles=st.checkbox('Activar cartografía pública OpenStreetMap',value=False,key='sentinel_osm')
-    limit=st.select_slider('Máximo de sitios visibles',[50,100,250,500],value=100)
+    st.caption('UBICACIONES · '+(target or 'Todas las líneas del caso'))
+    with st.expander('Opciones del mapa',expanded=False):
+        tiles=st.checkbox('Activar cartografía pública OpenStreetMap',value=False,key='sentinel_osm')
+        limit=st.select_slider('Máximo de sitios visibles',[50,100,250,500],value=100)
     points=queries.geography(s,target,limit)
     # Researcher supplied locations use the same entity model and never trigger geocoding.
     for e in queries.entities(s,limit=1000):
@@ -25,6 +27,8 @@ def map_view(s,target,selected):
             if target:continue
             points.append({'id':e['id'],'lat':attrs['lat'],'lon':attrs['lon'],'label':item['display_label'],'manual':True,'source':item.get('source')})
     points=points[:limit]
+    if not points:
+        st.info('No hay ubicaciones documentadas para este filtro. Importa CDR con coordenadas o agrega una ubicación con su fuente.')
     result=render_canvas('map',str(s.path)+'_map',selected,points=points,tiles=tiles)
     canvas_selection(result,{p['id'] for p in points})
     st.caption('Resumen por coordenadas de sitio; varios sectores pueden compartir el mismo punto. El límite visible no modifica los datos guardados.')
@@ -37,6 +41,8 @@ def graph_view(s,selected):
     kinds=['']+[r['kind'] for r in s.rows('SELECT DISTINCT kind FROM relations ORDER BY kind')]
     kind=st.selectbox('Tipo de vínculo',kinds,format_func=lambda k:k or 'Todos')
     nodes,edges=queries.graph(s,selected if mode=='EXPANSION' else None,limit,mode,kind)
+    if not nodes:
+        st.info('No hay entidades en esta vista. Importa los CDR del caso o selecciona un elemento y usa la expansión.')
     result=render_canvas('graph',str(s.path)+'_graph',selected,nodes=nodes,edges=edges)
     canvas_selection(result,{x['id'] for x in nodes}|{x['id'] for x in edges})
     st.caption('Comunicación, tráfico especial y observación de IMEI son categorías distintas. Selecciona una línea para inspeccionar su soporte.')
