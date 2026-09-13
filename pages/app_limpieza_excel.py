@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, date, time as dtime
 import pandas as pd
 import requests
 import streamlit as st
+from core.limpieza_offline import offline_address
 from guardian import login_guard
 from suite_nav import render_suite_sidebar  # ✅ Navegación unificada de la suite
 from ui.styles import apply_theme, info_panel, page_header, section_title
@@ -416,8 +417,16 @@ ALT_HOSTS = [_host_from_url(u) for u in ALT_URLS]
 HOSTS_CHAIN = [NOMINATIM_HOST] + ALT_HOSTS
 URLS_CHAIN = [NOMINATIM_URL] + ALT_URLS
 
-OPENCAGE_KEY = os.getenv("OPENCAGE_API_KEY") or st.secrets.get("OPENCAGE_API_KEY", "")
-LOCATIONIQ_KEY = os.getenv("LOCATIONIQ_API_KEY") or st.secrets.get("LOCATIONIQ_API_KEY", "")
+# Optional online credentials are resolved only when that provider is actually used.
+OPENCAGE_KEY = os.getenv("OPENCAGE_API_KEY", "")
+LOCATIONIQ_KEY = os.getenv("LOCATIONIQ_API_KEY", "")
+
+def _optional_geocoder_key(name):
+    try:
+        return st.secrets.get(name, "")
+    except (FileNotFoundError, KeyError):
+        return ""
+
 
 _GEOPY_REV_BY_HOST: Dict[str, RateLimiter] = {}
 
@@ -428,7 +437,7 @@ def _get_geopy_reverse_for_host(host: str) -> RateLimiter:
             geolocator.reverse,
             min_delay_seconds=1.8,
             max_retries=1,
-            error_wait_seconds=1.2,
+            error_wait_seconds=2.0,
             swallow_exceptions=False,
         )
     return _GEOPY_REV_BY_HOST[host]
@@ -479,11 +488,12 @@ def _reverse_http_base(base_url: str, lat, lon, lang="es", zoom=18, timeout=GEOC
 
 
 def _reverse_locationiq(lat, lon, lang="es"):
-    if not LOCATIONIQ_KEY:
+    api_key = LOCATIONIQ_KEY or _optional_geocoder_key("LOCATIONIQ_API_KEY")
+    if not api_key:
         return ""
     url = "https://us1.locationiq.com/v1/reverse"
     params = {
-        "key": LOCATIONIQ_KEY,
+        "key": api_key,
         "lat": f"{float(lat):.6f}",
         "lon": f"{float(lon):.6f}",
         "format": "json",
@@ -503,12 +513,13 @@ def _reverse_locationiq(lat, lon, lang="es"):
 
 
 def _reverse_opencage(lat, lon, lang="es"):
-    if not OPENCAGE_KEY:
+    api_key = OPENCAGE_KEY or _optional_geocoder_key("OPENCAGE_API_KEY")
+    if not api_key:
         return ""
     url = "https://api.opencagedata.com/geocode/v1/json"
     params = {
         "q": f"{float(lat):.6f},{float(lon):.6f}",
-        "key": OPENCAGE_KEY,
+        "key": api_key,
         "language": lang,
         "no_annotations": 1,
         "limit": 1,
@@ -1249,11 +1260,12 @@ def dedupe_datos_by_minute(df: pd.DataFrame):
 # ===========================
 # LÓGICA PRINCIPAL
 # ===========================
-def limpiar_excel(file, remove_duplicates: bool = False):
+def limpiar_excel(file, remove_duplicates: bool = False, offline: bool = False):
     progress = st.progress(0, text="Iniciando…")
     progress_section(progress, 4, "📥 Cargando archivo…")
 
-    init_plus_repo()
+    if not offline:
+        init_plus_repo()
 
     df = leer_archivo(file)
     original_len = len(df)
@@ -1347,7 +1359,7 @@ def limpiar_excel(file, remove_duplicates: bool = False):
         df.loc[mask_coords, "PLUS_CODE_SHORT"] = df.loc[mask_coords].apply(_mk_short, axis=1)
 
         name_map: Dict[str, str] = {}
-        for code in pd.Series(df.loc[mask_coords, "PLUS_CODE"].dropna().unique()):
+        for code in ([] if offline else pd.Series(df.loc[mask_coords, "PLUS_CODE"].dropna().unique())):
             try:
                 la, lo, clen = _decode_plus(code)
                 pr_save_plus(code, la, lo, clen)
@@ -1361,8 +1373,8 @@ def limpiar_excel(file, remove_duplicates: bool = False):
             df.loc[empty_mask, "PLUS_CODE_NOMBRE"] = df.loc[empty_mask, "PLUS_CODE"].map(name_map)
 
     # 7) Geocoding multi-zoom + near repo + cache
-    progress_section(progress, 54, "🌍 Geocodificando…")
-    if GEOCODE_ENABLED and mask_coords.any():
+    progress_section(progress, 54, "🔒 Modo offline: sin consultas de dirección" if offline else "🌍 Geocodificando…")
+    if not offline and GEOCODE_ENABLED and mask_coords.any():
         with closing(sqlite3.connect(CACHE_DB_PATH)) as con:
             con.execute(
                 """CREATE TABLE IF NOT EXISTS geocache (
@@ -1464,7 +1476,7 @@ def limpiar_excel(file, remove_duplicates: bool = False):
         return (t == "") or ("SIN_DIRECCIÓN" in t) or ("SIN_DIRECCION" in t) or t.startswith("CERCA DE (")
 
     dir_map: Dict[Tuple[float, float], str] = {}
-    if mask_coords.any():
+    if not offline and GEOCODE_ENABLED and mask_coords.any():
         need_dir_mask = mask_coords & df["PLUS_CODE_NOMBRE"].apply(lambda v: _is_sin_dir(str(v or "")))
         if need_dir_mask.any():
             unique_dir = df.loc[need_dir_mask, ["Latitud", "Longitud", "PLUS_CODE"]].drop_duplicates().reset_index(drop=True)
@@ -1505,7 +1517,7 @@ def limpiar_excel(file, remove_duplicates: bool = False):
                 return "SIN_DIRECCIÓN"
         return "SIN_DIRECCIÓN"
 
-    df["Direccion_final"] = df.apply(direccion_fallback, axis=1)
+    df["Direccion_final"] = df.apply(offline_address if offline else direccion_fallback, axis=1)
 
     # 8) Azimuth (parser robusto)
     progress_section(progress, 86, "🧮 Normalizando azimuth…")
@@ -1616,6 +1628,9 @@ def limpiar_excel(file, remove_duplicates: bool = False):
             "PlusRepo DB": [PLUS_REPO_DB],
         }
     )
+
+    if offline:
+        log_df["Modo geocodificación"] = "OFFLINE: sin consultas externas ni búsqueda en caché de direcciones"
 
     # 14) ESTADISTICAS
     progress_section(progress, 96, "📊 Calculando estadísticas…")
@@ -1755,6 +1770,14 @@ remove_dups = st.checkbox(
     ),
 )
 
+offline_mode = st.checkbox(
+    "🔒 Modo offline: no consultar direcciones en internet",
+    value=False,
+    help="Omite geocodificación, búsquedas administrativas y repositorios de nombres. Conserva direcciones ya incluidas, coordenadas y calcula Plus Codes localmente.",
+)
+if offline_mode:
+    st.caption("Sin consultas externas. Las direcciones faltantes se identifican como SIN_DIRECCIÓN (MODO OFFLINE).")
+
 uploaded_file = st.file_uploader(
     "📂 Sube tu archivo crudo (CSV, XLS o XLSX)",
     type=["csv", "xls", "xlsx"],
@@ -1762,7 +1785,7 @@ uploaded_file = st.file_uploader(
 if uploaded_file:
     if st.button("🚀 Limpiar y generar nuevo Excel"):
         try:
-            cleaned_data, suggested_name = limpiar_excel(uploaded_file, remove_duplicates=remove_dups)
+            cleaned_data, suggested_name = limpiar_excel(uploaded_file, remove_duplicates=remove_dups, offline=offline_mode)
             st.success(
                 "✅ Archivo procesado. Revisa 'Datos_Limpios', 'LOG_Limpieza', 'Duplicados' y 'ESTADISTICAS'."
             )

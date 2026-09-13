@@ -1,2 +1,15 @@
-SUITE_USER = "jgonzalo"
-SUITE_PASS = "2025"
+# Local configuration and confidential investigation material
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+cases/
+GoMapperCases/
+validation_cases/
+*.xlsx
+*.e01
+*.E01
+*.db
+*.db-*
+__pycache__/
+.pytest_cache/

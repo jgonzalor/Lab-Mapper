@@ -1,0 +1,19 @@
+/* Loaded only by the Sentinel page; retain Suite typography and navigation. */
+.block-container{max-width:none!important;padding-left:1.4rem!important;padding-right:1.4rem!important}
+[data-testid="stMetric"]{border:1px solid #ccdbe5;border-radius:12px;padding:14px;background:linear-gradient(135deg,#f4f8fb,#fff)}
+[data-testid="stExpander"]{border-radius:12px!important}
+[data-testid="stRadio"] div[role="radiogroup"]{gap:8px;padding:8px;background:rgba(115,145,170,.09);border-radius:12px}
+[data-testid="stRadio"] label{padding:6px 10px;border-radius:8px}
+[data-testid="stCaptionContainer"]{line-height:1.5}
+.sentinel-field{padding:9px 0;border-bottom:1px solid rgba(125,150,170,.22);overflow-wrap:anywhere}
+.sentinel-field small{display:block;opacity:.7;font-size:11px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.sentinel-badge{display:inline-block;padding:5px 9px;border-radius:6px;background:rgba(53,125,162,.12);font-size:12px;margin:4px 4px 10px 0}
+@media(max-width:900px){.block-container{padding-left:.7rem!important;padding-right:.7rem!important}}
+
+[data-testid="stButton"] button{min-height:2.6rem;border-radius:9px;font-weight:600}
+[data-testid="stButton"] button[kind="primary"], [data-testid="stFormSubmitButton"] button[kind="primary"]{background:#205b83;color:#fff;border-color:#205b83}
+[data-testid="stButton"] button:hover{border-color:#b78d34}
+[data-testid="stTextInput"] input,[data-baseweb="select"]{border-radius:8px}
+[data-testid="stTabs"] button[role="tab"]{padding:10px 16px;font-weight:600}
+[data-testid="stTabs"] button[aria-selected="true"]{color:#205b83;border-bottom:3px solid #b78d34}
+[data-testid="stMetricValue"]{color:#183d5a}
